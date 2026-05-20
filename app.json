@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "たべきりポッケ",
+    "slug": "tabekiri-pokke",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7FCFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tabekiripokke.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "食品のバーコード読み取りや写真登録のため、必要なときだけカメラを使用します。撮影した写真は食品管理のためにアプリ内で保存されます。",
+        "NSPhotoLibraryUsageDescription": "食品の写真を登録するため、選択した写真だけを読み込みます。フォトライブラリ全体を自動で読み取ることはありません。",
+        "NSPhotoLibraryAddUsageDescription": "食品の写真を登録するため、選択した写真だけをアプリ内で利用します。"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0EA5E9"
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "食品のバーコード読み取りや写真登録のため、必要なときだけカメラを使用します。撮影した写真は食品管理のためにアプリ内で保存されます。"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "食品の写真を登録するため、選択した写真だけを読み込みます。フォトライブラリ全体を自動で読み取ることはありません。",
+          "cameraPermission": "食品の写真を撮影するため、必要なときだけカメラを使用します。撮影した写真は食品管理のためにアプリ内で保存されます。"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0EA5E9",
+          "defaultChannel": "food-expiry"
+        }
+      ]
+    ]
+  }
+}

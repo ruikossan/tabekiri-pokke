@@ -1,0 +1,21 @@
+export const colors = {
+  primary: "#0EA5E9",
+  secondary: "#34D399",
+  background: "#F7FCFF",
+  card: "#FFFFFF",
+  textMain: "#174151",
+  textSub: "#5F7F8C",
+  danger: "#F97373",
+  warning: "#FB923C",
+  bag: "#EC4899",
+  success: "#22C55E",
+  border: "#D9EEF5",
+  muted: "#EAF7FB",
+  yellow: "#EAB308",
+  primarySoft: "#E0F7FF",
+  secondarySoft: "#ECFDF5",
+  dangerSoft: "#FFF1F2",
+  bagSoft: "#FDF2F8",
+  shadow: "#7ECDE6",
+  backdrop: "rgba(23, 65, 81, 0.28)"
+};
