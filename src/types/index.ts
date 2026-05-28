@@ -17,14 +17,7 @@ export type StockItem = {
   updatedAt: string;
 };
 
-export type EmergencyBagItem = {
-  id: string;
-  name: string;
-  category?: string;
-  checked: boolean;
-};
-
-export type ShoppingReason = "不足" | "期限間近" | "手動追加";
+export type ShoppingReason = "買い足し予定" | "手動追加";
 
 export type ShoppingItem = {
   id: string;
@@ -33,14 +26,18 @@ export type ShoppingItem = {
   unit?: string;
   reason: ShoppingReason;
   checked: boolean;
+  source?: "nearExpiry" | "manual";
+  status?: "pending" | "purchased";
   createdAt: string;
+  updatedAt?: string;
 };
 
+export type QuickActionId = "add" | "stock" | "expiry" | "shopping" | "templates" | "location" | "barcode" | "history" | "guide" | "settings";
+
 export type AppSettings = {
-  familySize: number;
-  stockDays: number;
   notifyDays: number[];
   inspectionIntervalDays: number;
+  quickActionIds: QuickActionId[];
 };
 
 export type StockHistoryType = "消費" | "購入" | "点検";
@@ -61,6 +58,19 @@ export type ShoppingTemplate = {
   name: string;
   quantity: number;
   unit: string;
+  category?: string;
+  location?: string;
+  defaultExpiryDays?: number;
+  barcode?: string;
+  memo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ExpiryCandidate = {
+  label: string;
+  days?: number;
+  type?: "date";
 };
 
 export type Plan = "free" | "premium";
@@ -68,7 +78,6 @@ export type Plan = "free" | "premium";
 export type PremiumFeature =
   | "unlimitedItems"
   | "adFree"
-  | "emergencyStock"
   | "familyShare"
   | "multiLocation"
   | "barcodeScan"
@@ -88,41 +97,33 @@ export type ExpiryStatus =
   | "余裕あり"
   | "期限なし";
 
-export type RequirementKey = "water" | "food" | "toilet";
-
-export type RequirementResult = {
-  key: RequirementKey;
-  label: string;
-  required: number;
-  current: number;
-  shortage: number;
-  unit: string;
-  rate: number;
-};
-
-export type PreparednessScore = {
-  score: number;
-  messages: string[];
-  details: {
-    label: string;
-    points: number;
-    tone: "success" | "warning" | "yellow" | "bag" | "danger";
-  }[];
-};
-
 export type RootStackParamList = {
   Home: undefined;
   StockList: undefined;
-  StockForm: { itemId?: string; scannedBarcode?: string } | undefined;
+  StockForm: {
+    itemId?: string;
+    scannedBarcode?: string;
+    name?: string;
+    quantity?: number;
+    unit?: string;
+    category?: string;
+    location?: string;
+    expiryDate?: string;
+    defaultExpiryDays?: number;
+    barcode?: string;
+    imageUri?: string;
+    fromShoppingListItemId?: string;
+    saveToFavoriteDefault?: boolean;
+  } | undefined;
   BarcodeScan: { itemId?: string } | undefined;
+  ContinuousScan: undefined;
+  OcrExpiry: undefined;
   History: undefined;
   LocationView: undefined;
-  BeginnerGuide: undefined;
   ShoppingTemplates: undefined;
   Guide: undefined;
   ExpiryCheck: undefined;
-  RequirementCheck: undefined;
-  EmergencyBag: undefined;
+  RecipeDetail: { planId: string };
   ShoppingList: undefined;
   Settings: undefined;
 };

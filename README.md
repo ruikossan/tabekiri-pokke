@@ -29,7 +29,7 @@ GitHub Pagesで公開するページ:
 GitHub Pages公開URL:
 
 ```text
-https://ruikossan.github.io/tabekiri-pokke/
+https://ruikossan.github.io/tabekiri-pokke/index.html
 https://ruikossan.github.io/tabekiri-pokke/support.html
 https://ruikossan.github.io/tabekiri-pokke/privacy.html
 ```
@@ -74,6 +74,7 @@ https://ruikossan.github.io/tabekiri-pokke/privacy.html
 - アプリ表示名: `たべきりポッケ`
 - slug: `tabekiri-pokke`
 - iOS Bundle ID: `com.tabekiripokke.app`
+- iPhone専用: `ios.supportsTablet` は `false`
 - アプリバージョン: `1.2.0`
 - iOS Build Number: `1`
 - アプリアイコン: `./assets/icon.png`

@@ -5,23 +5,30 @@ import { colors } from "../constants/colors";
 import { MenuCard } from "../components/MenuCard";
 import { SectionTitle } from "../components/SectionTitle";
 import { SummaryCard } from "../components/SummaryCard";
-import { RootStackParamList } from "../types";
+import { QuickActionId, RootStackParamList } from "../types";
 import { useAppData } from "../services/AppDataContext";
 import { getDaysUntilExpiry, sortByExpiry } from "../utils/expiryUtils";
-import { calculatePreparednessScore } from "../utils/scoreUtils";
 import { StockItemCard } from "../components/StockItemCard";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AdBanner } from "../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
+type MenuAction = {
+  id: QuickActionId;
+  icon: string;
+  title: string;
+  description: string;
+  onPress: () => void;
+};
+
 export function HomeScreen({ navigation }: Props) {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [scoreVisible, setScoreVisible] = useState(false);
+  const [addOptionsVisible, setAddOptionsVisible] = useState(false);
+  const [barcodeModeVisible, setBarcodeModeVisible] = useState(false);
+  const [quickActionEditVisible, setQuickActionEditVisible] = useState(false);
   const sheetTranslateY = useRef(new Animated.Value(360)).current;
-  const scoreTranslateY = useRef(new Animated.Value(360)).current;
-  const { stockItems, emergencyBagItems, shoppingItems, settings } = useAppData();
-  const score = calculatePreparednessScore(stockItems, emergencyBagItems, settings);
+  const { stockItems, shoppingItems, settings, updateSettings, showToast } = useAppData();
   const urgentItems = sortByExpiry(stockItems).filter((item) => {
     const days = getDaysUntilExpiry(item.expiryDate);
     return days !== undefined && days <= 90;
@@ -30,8 +37,28 @@ export function HomeScreen({ navigation }: Props) {
     const days = getDaysUntilExpiry(item.expiryDate);
     return days !== undefined && days <= 30;
   }).length;
-  const scoreTone = score.score >= 80 ? colors.success : score.score >= 50 ? colors.warning : colors.danger;
   const activeShoppingItems = shoppingItems.filter((item) => !item.checked).length;
+  const defaultQuickActionIds: QuickActionId[] = ["add", "barcode", "expiry", "shopping"];
+  const savedQuickActionIds = Array.isArray(settings.quickActionIds) ? settings.quickActionIds : [];
+
+  const menuActions: MenuAction[] = [
+    { id: "add", icon: "+", title: "食品を追加", description: "登録方法を選んで追加", onPress: openAddOptionsFromMenu },
+    { id: "stock", icon: "□", title: "食品ストック一覧", description: "登録済みの食品を確認", onPress: () => navigateFromMenu("StockList") },
+    { id: "expiry", icon: "!", title: "期限チェック", description: "期限切れや期限間近を確認", onPress: () => navigateFromMenu("ExpiryCheck") },
+    { id: "shopping", icon: "+", title: "買い物リスト", description: "買い足しを確認", onPress: () => navigateFromMenu("ShoppingList") },
+    { id: "templates", icon: "*", title: "よく買うもの", description: "買い物リストへ追加", onPress: () => navigateFromMenu("ShoppingTemplates") },
+    { id: "location", icon: "⌂", title: "場所ごとに見る", description: "保管場所ごとに確認", onPress: () => navigateFromMenu("LocationView") },
+    { id: "barcode", icon: "|", title: "バーコード読み取り", description: "通常モードか連続撮影を選んで登録", onPress: openBarcodeModeFromMenu },
+    { id: "history", icon: "≡", title: "履歴", description: "使った・買った・点検した記録", onPress: () => navigateFromMenu("History") },
+    { id: "guide", icon: "?", title: "使い方ガイド", description: "基本操作をもう一度見る", onPress: () => navigateFromMenu("Guide") },
+    { id: "settings", icon: "⚙", title: "設定", description: "通知やお試し内容を管理", onPress: () => navigateFromMenu("Settings") }
+  ];
+  const validActionIds = new Set(menuActions.map((action) => action.id));
+  const sanitizedQuickActionIds = savedQuickActionIds.filter((id) => validActionIds.has(id));
+  const selectedQuickActionIds = sanitizedQuickActionIds.length > 0 ? sanitizedQuickActionIds : defaultQuickActionIds;
+  const visibleQuickActions = selectedQuickActionIds
+    .map((id) => menuActions.find((action) => action.id === id))
+    .filter((action): action is MenuAction => Boolean(action));
 
   function openMenu(): void {
     setMenuVisible(true);
@@ -51,27 +78,70 @@ export function HomeScreen({ navigation }: Props) {
     }).start(() => setMenuVisible(false));
   }
 
-  function openScore(): void {
-    setScoreVisible(true);
-    Animated.spring(scoreTranslateY, {
-      toValue: 0,
-      useNativeDriver: true,
-      speed: 28,
-      bounciness: 5
-    }).start();
-  }
-
-  function closeScore(): void {
-    Animated.timing(scoreTranslateY, {
-      toValue: 360,
-      duration: 180,
-      useNativeDriver: true
-    }).start(() => setScoreVisible(false));
-  }
-
   function navigateFromMenu(screen: keyof RootStackParamList): void {
     closeMenu();
     navigation.navigate(screen as never);
+  }
+
+  function openAddOptions(): void {
+    setAddOptionsVisible(true);
+  }
+
+  function closeAddOptions(): void {
+    setAddOptionsVisible(false);
+  }
+
+  function openAddOptionsFromMenu(): void {
+    closeMenu();
+    setTimeout(() => setAddOptionsVisible(true), 220);
+  }
+
+  function openBarcodeMode(): void {
+    setBarcodeModeVisible(true);
+  }
+
+  function openBarcodeModeFromMenu(): void {
+    closeMenu();
+    setTimeout(() => setBarcodeModeVisible(true), 220);
+  }
+
+  function closeBarcodeMode(): void {
+    setBarcodeModeVisible(false);
+  }
+
+  function chooseBarcodeMode(mode: "normal" | "continuous"): void {
+    closeBarcodeMode();
+    navigation.navigate(mode === "normal" ? "BarcodeScan" : "ContinuousScan");
+  }
+
+  function toggleQuickAction(id: QuickActionId): void {
+    const nextIds = selectedQuickActionIds.includes(id)
+      ? selectedQuickActionIds.filter((currentId) => currentId !== id)
+      : [...selectedQuickActionIds, id];
+
+    if (nextIds.length === 0) {
+      showToast("よく使う操作は1つ以上選んでください");
+      return;
+    }
+
+    void updateSettings({ ...settings, quickActionIds: nextIds })
+      .then(() => showToast("よく使う操作を更新しました"));
+  }
+
+  function chooseAddMethod(method: "favorite" | "barcode" | "manual"): void {
+    closeAddOptions();
+    if (method === "favorite") {
+      navigation.navigate("ShoppingTemplates");
+      return;
+    }
+    if (method === "manual") {
+      navigation.navigate("StockForm");
+      return;
+    }
+    if (method === "barcode") {
+      openBarcodeMode();
+      return;
+    }
   }
 
   return (
@@ -80,27 +150,28 @@ export function HomeScreen({ navigation }: Props) {
         <View style={styles.topBar}>
           <View style={styles.topTitle}>
             <Text style={styles.appName}>たべきりポッケ</Text>
-            <Text style={styles.appSub}>冷蔵庫から備蓄まで、食品の期限と買い物を管理</Text>
+            <Text style={styles.appSub}>冷蔵庫から買い物まで、食品の期限と在庫を管理</Text>
           </View>
           <Pressable style={styles.menuButton} onPress={openMenu}>
             <Text style={styles.menuButtonIcon}>≡</Text>
             <Text style={styles.menuButtonText}>メニュー</Text>
           </Pressable>
         </View>
+
         <View style={styles.hero}>
-          <Pressable style={styles.heroTop} onPress={openScore}>
+          <View style={styles.heroTop}>
             <View>
-              <Text style={styles.heroLabel}>今日の食品ストック</Text>
-              <Text style={[styles.heroScore, { color: scoreTone }]}>{score.score}点</Text>
+              <Text style={styles.heroLabel}>登録済み食品</Text>
+              <Text style={styles.heroScore}>{stockItems.length}件</Text>
             </View>
-            <View style={[styles.scoreRing, { borderColor: scoreTone }]}>
-              <Text style={[styles.scoreRingText, { color: scoreTone }]}>{score.score >= 80 ? "良好" : score.score >= 50 ? "注意" : "要確認"}</Text>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>{expiringSoon > 0 ? "確認あり" : "順調"}</Text>
             </View>
-          </Pressable>
-          <Text style={styles.heroMessage}>{score.messages[0]}</Text>
+          </View>
+          <Text style={styles.heroMessage}>{expiringSoon > 0 ? `30日以内の期限が${expiringSoon}件あります` : "期限が近い食品はありません"}</Text>
           <View style={styles.heroActions}>
-            <PrimaryButton title="食品を追加" onPress={() => navigation.navigate("StockForm")} />
-            <PrimaryButton title="消費プラン" variant="soft" onPress={() => navigation.navigate("ExpiryCheck")} />
+            <PrimaryButton title="食品を追加" onPress={openAddOptions} />
+            <PrimaryButton title="期限チェック" variant="soft" onPress={() => navigation.navigate("ExpiryCheck")} />
           </View>
         </View>
 
@@ -112,10 +183,6 @@ export function HomeScreen({ navigation }: Props) {
         </View>
         <View style={styles.adWrap}><AdBanner /></View>
 
-        <View style={styles.scoreBox}>
-          {score.messages.slice(0, 2).map((message) => <MenuCard key={message} icon="!" title={message} description="必要な画面で詳しく確認できます" onPress={() => navigation.navigate("RequirementCheck")} compact />)}
-        </View>
-
         <SectionTitle title="期限が近い食品" />
         <View style={styles.urgent}>
           {urgentItems.length === 0 ? (
@@ -125,15 +192,19 @@ export function HomeScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <SectionTitle title="よく使う操作" />
+        <View style={styles.quickHeader}>
+          <SectionTitle title="よく使う操作" />
+          <Pressable style={styles.editQuickButton} onPress={() => setQuickActionEditVisible(true)}>
+            <Text style={styles.editQuickButtonText}>編集</Text>
+          </Pressable>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActions}>
-          <PrimaryButton title="バーコードで登録" variant="soft" onPress={() => navigation.navigate("BarcodeScan")} />
-          <PrimaryButton title="期限チェック" variant="soft" onPress={() => navigation.navigate("ExpiryCheck")} />
-          <PrimaryButton title="買い物リスト" variant="soft" onPress={() => navigation.navigate("ShoppingList")} />
-          <PrimaryButton title="場所ごとに見る" variant="soft" onPress={() => navigation.navigate("LocationView")} />
+          {visibleQuickActions.map((action) => (
+            <PrimaryButton key={action.id} title={action.title} variant="soft" onPress={action.onPress} />
+          ))}
         </ScrollView>
-
       </ScrollView>
+
       <Modal transparent visible={menuVisible} animationType="none" onRequestClose={closeMenu}>
         <Pressable style={styles.backdrop} onPress={closeMenu} />
         <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetTranslateY }] }]}>
@@ -146,53 +217,93 @@ export function HomeScreen({ navigation }: Props) {
           </View>
           <ScrollView contentContainerStyle={styles.sheetContent}>
             <Text style={styles.sheetSubTitle}>日常の管理</Text>
-            <MenuCard icon="+" title="食品を追加" description="買ってきた食品を登録" onPress={() => navigateFromMenu("StockForm")} compact />
-            <MenuCard icon="□" title="食品ストック一覧" description="冷蔵庫、冷凍庫、常温の食品を確認" onPress={() => navigateFromMenu("StockList")} compact />
-            <MenuCard icon="!" title="期限チェック" description="期限切れや期限間近を確認" onPress={() => navigateFromMenu("ExpiryCheck")} compact />
-            <MenuCard icon="+" title="買い物リスト" description="不足と期限間近から自動作成" onPress={() => navigateFromMenu("ShoppingList")} compact />
-            <MenuCard icon="*" title="よく買うもの" description="買い物リストへ追加" onPress={() => navigateFromMenu("ShoppingTemplates")} compact />
-            <MenuCard icon="⌂" title="場所ごとに見る" description="保管場所ごとに確認" onPress={() => navigateFromMenu("LocationView")} compact />
-            <MenuCard icon="|" title="バーコード読み取り" description="バーコードで食品を登録" onPress={() => navigateFromMenu("BarcodeScan")} compact />
+            {menuActions.slice(0, 7).map((action) => (
+              <MenuCard key={action.id} icon={action.icon} title={action.title} description={action.description} onPress={action.onPress} compact />
+            ))}
 
             <Text style={styles.sheetSubTitle}>記録・設定</Text>
-            <MenuCard icon="≡" title="履歴" description="使った・買った・点検した記録" onPress={() => navigateFromMenu("History")} compact />
-            <MenuCard icon="?" title="使い方ガイド" description="基本操作をもう一度見る" onPress={() => navigateFromMenu("Guide")} compact />
-            <MenuCard icon="⚙" title="設定" description="人数・通知・お試し内容" onPress={() => navigateFromMenu("Settings")} compact />
-
-            <Text style={styles.sheetSubTitle}>備蓄・防災</Text>
-            <MenuCard icon="%" title="備蓄必要量チェック" description="家族人数に応じた不足量を確認" onPress={() => navigateFromMenu("RequirementCheck")} compact />
-            <MenuCard icon="✓" title="防災バッグ" description="持ち出し袋の中身を確認" onPress={() => navigateFromMenu("EmergencyBag")} compact />
-            <MenuCard icon="○" title="防災備蓄リスト" description="まずそろえたい備蓄を確認" onPress={() => navigateFromMenu("BeginnerGuide")} compact />
+            {menuActions.slice(7).map((action) => (
+              <MenuCard key={action.id} icon={action.icon} title={action.title} description={action.description} onPress={action.onPress} compact />
+            ))}
           </ScrollView>
         </Animated.View>
       </Modal>
-      <Modal transparent visible={scoreVisible} animationType="none" onRequestClose={closeScore}>
-        <Pressable style={styles.backdrop} onPress={closeScore} />
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: scoreTranslateY }] }]}>
+
+      <Modal transparent visible={addOptionsVisible} animationType="fade" onRequestClose={closeAddOptions}>
+        <Pressable style={styles.backdrop} onPress={closeAddOptions} />
+        <View style={styles.addSheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>点数の理由</Text>
-            <Pressable style={styles.closeButton} onPress={closeScore}>
+            <Text style={styles.sheetTitle}>食品を追加</Text>
+            <Pressable style={styles.closeButton} onPress={closeAddOptions}>
               <Text style={styles.closeText}>閉じる</Text>
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={styles.scoreSheetContent}>
-            <View style={styles.scoreDetailHero}>
-              <Text style={[styles.scoreDetailValue, { color: scoreTone }]}>{score.score}点</Text>
-              <Text style={styles.scoreDetailText}>100点から、不足や期限が近いものを引いています。</Text>
-            </View>
-            <View style={styles.scoreDetails}>
-              {score.details.map((detail) => (
-                <View key={detail.label} style={styles.scoreDetailRow}>
-                  <Text style={styles.scoreDetailLabel}>{detail.label}</Text>
-                  <Text style={[styles.scoreDetailPoint, { color: colors[detail.tone] }]}>{detail.points === 0 ? "OK" : `${detail.points}点`}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        </Animated.View>
+          <View style={styles.addOptions}>
+            <Text style={styles.addOptionGroupTitle}>基本の追加方法</Text>
+            <AddMethodButton title="手入力で追加" description="名前・数量・期限を自分で入力します" onPress={() => chooseAddMethod("manual")} primary />
+            <AddMethodButton title="バーコードで追加" description="商品のバーコードを読み取って登録します" onPress={() => chooseAddMethod("barcode")} />
+            <Text style={styles.addOptionGroupTitle}>登録済みの商品から追加</Text>
+            <AddMethodButton title="よく買うものから追加" description="登録済みの定番品を選びます" onPress={() => chooseAddMethod("favorite")} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={barcodeModeVisible} animationType="fade" onRequestClose={closeBarcodeMode}>
+        <Pressable style={styles.backdrop} onPress={closeBarcodeMode} />
+        <View style={styles.addSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>バーコード読み取り</Text>
+            <Pressable style={styles.closeButton} onPress={closeBarcodeMode}>
+              <Text style={styles.closeText}>閉じる</Text>
+            </Pressable>
+          </View>
+          <View style={styles.addOptions}>
+            <AddMethodButton title="通常モードで読み取る" onPress={() => chooseBarcodeMode("normal")} primary />
+            <AddMethodButton title="連続撮影でまとめて読み取る" onPress={() => chooseBarcodeMode("continuous")} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={quickActionEditVisible} animationType="fade" onRequestClose={() => setQuickActionEditVisible(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setQuickActionEditVisible(false)} />
+        <View style={styles.addSheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>よく使う操作を編集</Text>
+            <Pressable style={styles.closeButton} onPress={() => setQuickActionEditVisible(false)}>
+              <Text style={styles.closeText}>完了</Text>
+            </Pressable>
+          </View>
+          <View style={styles.quickEditList}>
+            {menuActions.map((action) => {
+              const selected = selectedQuickActionIds.includes(action.id);
+              return (
+                <Pressable key={action.id} style={[styles.quickEditItem, selected && styles.quickEditItemSelected]} onPress={() => toggleQuickAction(action.id)}>
+                  <View style={styles.quickEditTextBox}>
+                    <Text style={styles.quickEditTitle}>{action.title}</Text>
+                    <Text style={styles.quickEditDescription}>{action.description}</Text>
+                  </View>
+                  <View style={[styles.quickEditCheck, selected && styles.quickEditCheckSelected]}>
+                    <Text style={[styles.quickEditCheckText, selected && styles.quickEditCheckTextSelected]}>{selected ? "ON" : "OFF"}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       </Modal>
     </>
+  );
+}
+
+function AddMethodButton({ title, description, onPress, primary = false }: { title: string; description?: string; onPress: () => void; primary?: boolean }) {
+  return (
+    <Pressable style={[styles.addOptionButton, primary && styles.addOptionPrimary]} onPress={onPress}>
+      <Text style={[styles.addOptionText, primary && styles.addOptionPrimaryText]}>{title}</Text>
+      {description ? <Text style={[styles.addOptionDescription, primary && styles.addOptionPrimaryDescription]}>{description}</Text> : null}
+    </Pressable>
   );
 }
 
@@ -223,34 +334,46 @@ const styles = StyleSheet.create({
   },
   heroTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   heroLabel: { color: colors.textSub, fontSize: 15, fontWeight: "800" },
-  heroScore: { fontSize: 44, fontWeight: "900", marginTop: 2 },
-  scoreRing: { width: 76, height: 76, borderRadius: 38, borderWidth: 7, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
-  scoreRingText: { fontSize: 14, fontWeight: "900" },
+  heroScore: { color: colors.primary, fontSize: 44, fontWeight: "900", marginTop: 2 },
+  heroBadge: { minWidth: 76, minHeight: 76, borderRadius: 38, borderWidth: 7, borderColor: colors.primary, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
+  heroBadgeText: { color: colors.primary, fontSize: 14, fontWeight: "900" },
   heroMessage: { color: colors.textMain, fontSize: 16, fontWeight: "700", lineHeight: 23 },
   heroActions: { gap: 9 },
   summaryGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10, paddingHorizontal: 20 },
-  scoreBox: { paddingHorizontal: 20, paddingTop: 12, gap: 10 },
-  adWrap: { paddingHorizontal: 20, paddingTop: 12 },
+  adWrap: { display: "none" },
   urgent: { paddingHorizontal: 20, gap: 10, marginBottom: 2 },
   emptyPanel: { backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border, padding: 16 },
   emptyText: { color: colors.textSub, fontSize: 15, fontWeight: "700" },
+  quickHeader: { paddingRight: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  editQuickButton: { minHeight: 36, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
+  editQuickButtonText: { color: colors.primary, fontSize: 14, fontWeight: "900" },
   quickActions: { paddingHorizontal: 20, gap: 10, paddingBottom: 2 },
   backdrop: { flex: 1, backgroundColor: colors.backdrop },
   sheet: { position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "82%", backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: 10, paddingHorizontal: 16, paddingBottom: 18 },
+  addSheet: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.background, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: 10, paddingHorizontal: 16, paddingBottom: 24 },
   sheetHandle: { width: 44, height: 5, borderRadius: 999, backgroundColor: colors.border, alignSelf: "center", marginBottom: 12 },
   sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   sheetTitle: { color: colors.textMain, fontSize: 22, fontWeight: "900" },
   sheetSubTitle: { color: colors.textSub, fontSize: 14, fontWeight: "900" },
   closeButton: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   closeText: { color: colors.textMain, fontWeight: "800" },
-  sheetContent: { gap: 10, paddingBottom: 20 }
-  ,
-  scoreSheetContent: { paddingBottom: 24 },
-  scoreDetailHero: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 16, marginBottom: 12 },
-  scoreDetailValue: { fontSize: 40, fontWeight: "900" },
-  scoreDetailText: { color: colors.textSub, fontSize: 14, lineHeight: 20, marginTop: 4 },
-  scoreDetails: { gap: 10, paddingBottom: 12 },
-  scoreDetailRow: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  scoreDetailLabel: { color: colors.textMain, fontSize: 15, fontWeight: "800", flex: 1 },
-  scoreDetailPoint: { fontSize: 16, fontWeight: "900" }
+  sheetContent: { gap: 10, paddingBottom: 20 },
+  addOptions: { gap: 10 },
+  addOptionGroupTitle: { color: colors.textSub, fontSize: 13, fontWeight: "900", marginTop: 2 },
+  addOptionButton: { minHeight: 62, borderRadius: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "flex-start", justifyContent: "center", paddingHorizontal: 14, paddingVertical: 10 },
+  addOptionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
+  addOptionText: { color: colors.primary, fontSize: 16, fontWeight: "900" },
+  addOptionPrimaryText: { color: colors.card },
+  addOptionDescription: { color: colors.textSub, fontSize: 13, fontWeight: "700", marginTop: 4 },
+  addOptionPrimaryDescription: { color: colors.card },
+  quickEditList: { gap: 10 },
+  quickEditItem: { minHeight: 64, borderRadius: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 },
+  quickEditItemSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  quickEditTextBox: { flex: 1 },
+  quickEditTitle: { color: colors.textMain, fontSize: 16, fontWeight: "900" },
+  quickEditDescription: { color: colors.textSub, fontSize: 13, fontWeight: "700", marginTop: 3 },
+  quickEditCheck: { width: 52, minHeight: 34, borderRadius: 999, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.card },
+  quickEditCheckSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  quickEditCheckText: { color: colors.textSub, fontSize: 12, fontWeight: "900" },
+  quickEditCheckTextSelected: { color: colors.card }
 });

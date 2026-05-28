@@ -29,6 +29,9 @@ tabekiri-pokke-ios
 Copyright:
 © 2026 たべきりポッケ
 
+問い合わせ先:
+ruikossan@gmail.com
+
 ## プロモーション用テキスト
 
 冷蔵庫や食品ストックの中身、賞味期限、買い物リストをまとめて管理。買い忘れや食品ロスを減らしたい家庭向けのシンプルな食品管理アプリです。
@@ -60,20 +63,26 @@ Copyright:
 
 冷蔵庫,食品管理,賞味期限,消費期限,買い物リスト,食品ロス,在庫管理,食材,期限通知
 
-## サポートURL
-
-GitHub Pages公開後、次の形式のURLを入力してください。
+## WebサイトURL
 
 ```text
-https://<GitHubユーザー名>.github.io/<リポジトリ名>/support.html
+https://ruikossan.github.io/tabekiri-pokke/index.html
+```
+
+## サポートURL
+
+App Store Connectには次のURLを入力してください。
+
+```text
+https://ruikossan.github.io/tabekiri-pokke/support.html
 ```
 
 ## プライバシーポリシーURL
 
-GitHub Pages公開後、次の形式のURLを入力してください。
+App Store Connectには次のURLを入力してください。
 
 ```text
-https://<GitHubユーザー名>.github.io/<リポジトリ名>/privacy.html
+https://ruikossan.github.io/tabekiri-pokke/privacy.html
 ```
 
 ## App Privacy回答案
@@ -132,3 +141,6 @@ https://<GitHubユーザー名>.github.io/<リポジトリ名>/privacy.html
 カメラ権限はバーコード読み取りと食品写真の撮影に使用します。写真ライブラリ権限は食品写真の選択に使用します。通知権限は期限やチェック日のリマインドに使用します。
 
 登録データは端末内に保存され、外部サーバーには送信されません。
+
+問い合わせ先:
+ruikossan@gmail.com

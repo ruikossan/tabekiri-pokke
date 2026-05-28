@@ -1,0 +1,38 @@
+[
+  {
+    "source": "ホーム.png",
+    "output": "01-home.png",
+    "brand": "たべきりポッケ",
+    "title": "冷蔵庫から備蓄まで、まとめて管理",
+    "subtitle": "期限と買い物予定をひと目でチェック",
+    "badge": "ホーム",
+    "footer": "実際のアプリ画面を使用しています"
+  },
+  {
+    "source": "食品ストック.png",
+    "output": "02-stock-list.png",
+    "brand": "たべきりポッケ",
+    "title": "食品ストックをすっきり一覧",
+    "subtitle": "カテゴリ・保管場所ごとに確認できます",
+    "badge": "食品ストック",
+    "footer": "実際のアプリ画面を使用しています"
+  },
+  {
+    "source": "消費プラン.png",
+    "output": "03-consumption-plan.png",
+    "brand": "たべきりポッケ",
+    "title": "期限が近い食品を食べきり候補に",
+    "subtitle": "あるものから消費プランを表示",
+    "badge": "消費プラン",
+    "footer": "実際のアプリ画面を使用しています"
+  },
+  {
+    "source": "買い物リスト.png",
+    "output": "04-shopping-list.png",
+    "brand": "たべきりポッケ",
+    "title": "不足・期限間近を買い物リストへ",
+    "subtitle": "買い忘れと買いすぎを防ぎます",
+    "badge": "買い物リスト",
+    "footer": "実際のアプリ画面を使用しています"
+  }
+]

@@ -36,7 +36,6 @@ export function StockItemCard({ item, onPress }: { item: StockItem; onPress?: ()
             <Text style={styles.expiry}>{item.expiryDate ?? "期限なし"}</Text>
           </View>
         </View>
-        {item.inspectionDate ? <Text style={styles.subInfo}>次回点検日: {item.inspectionDate}</Text> : null}
       </Pressable>
     </Animated.View>
   );

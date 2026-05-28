@@ -13,7 +13,6 @@ export const defaultUnitByCategory: Record<string, string> = {
   お菓子: "個",
   日用品: "個",
   医薬品: "個",
-  防災用品: "個",
   その他: "個"
 };
 
@@ -30,7 +29,6 @@ export const unitOptionsByCategory: Record<string, string[]> = {
   お菓子: ["個", "袋", "箱"],
   日用品: ["個", "本", "袋", "箱"],
   医薬品: ["個", "本", "箱"],
-  防災用品: ["個", "本", "回分", "箱"],
   その他: units
 };
 

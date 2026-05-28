@@ -36,7 +36,7 @@ export const notificationService = {
   },
 
   async scheduleExpiryNotifications(item: StockItem, settings: AppSettings): Promise<string[]> {
-    if (!item.expiryDate && !item.inspectionDate) {
+    if (!item.expiryDate) {
       return [];
     }
 
@@ -68,8 +68,8 @@ export const notificationService = {
       }
     }
 
-    if (item.inspectionDate) {
-      const triggerDate = setSeconds(setMinutes(setHours(parseISO(item.inspectionDate), 9), 0), 0);
+    if (item.inspectionDate && false) {
+      const triggerDate = setSeconds(setMinutes(setHours(parseISO(item.inspectionDate ?? ""), 9), 0), 0);
       if (triggerDate > now) {
         const id = await Notifications.scheduleNotificationAsync({
           content: {

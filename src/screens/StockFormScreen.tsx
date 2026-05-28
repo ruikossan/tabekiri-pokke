@@ -1,41 +1,55 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { addDays, formatISO } from "date-fns";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { categories } from "../constants/categories";
 import { colors } from "../constants/colors";
 import { locations } from "../constants/locations";
 import { getDefaultUnitForCategory, getUnitOptionsForCategory } from "../constants/units";
+import { CalendarDatePicker } from "../components/CalendarDatePicker";
 import { FormInput } from "../components/FormInput";
 import { Header } from "../components/Header";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { SectionTitle } from "../components/SectionTitle";
 import { SelectButtonGroup } from "../components/SelectButtonGroup";
 import { RootStackParamList, StockItem } from "../types";
 import { useAppData } from "../services/AppDataContext";
-import { formatDateInput, isValidDateInput } from "../utils/dateInputUtils";
+import { isValidDateInput } from "../utils/dateInputUtils";
 import { canAddStockItem, currentPlan } from "../utils/featureGate";
+import {
+  calculateDefaultExpiryDays,
+  calculateExpiryDate,
+  createFavoriteFromStock,
+  findFavoriteByName,
+  findLatestStockByName,
+  formatDefaultExpiryDays,
+  getDefaultExpiryCandidates,
+  upsertFavoriteItem
+} from "../utils/favoriteItemUtils";
 
 type Props = NativeStackScreenProps<RootStackParamList, "StockForm">;
 
 export function StockFormScreen({ route, navigation }: Props) {
-  const { stockItems, settings, addStockItem, updateStockItem, addStockHistoryItem, showToast } = useAppData();
+  const { stockItems, shoppingItems, setShoppingItems, shoppingTemplates, setShoppingTemplates, addStockItem, updateStockItem, addStockHistoryItem, showToast } = useAppData();
   const editingItem = useMemo(() => stockItems.find((item) => item.id === route.params?.itemId), [stockItems, route.params?.itemId]);
   const handledScannedBarcodeRef = useRef<string | undefined>(undefined);
-  const [name, setName] = useState(editingItem?.name ?? "");
-  const [barcode, setBarcode] = useState(editingItem?.barcode ?? "");
-  const [imageUri, setImageUri] = useState(editingItem?.imageUri ?? "");
-  const [category, setCategory] = useState(editingItem?.category ?? "野菜");
-  const [quantity, setQuantity] = useState(String(editingItem?.quantity ?? ""));
-  const [unit, setUnit] = useState(editingItem?.unit ?? getDefaultUnitForCategory(editingItem?.category ?? "野菜"));
-  const [expiryDate, setExpiryDate] = useState(editingItem?.expiryDate ?? "");
+  const [name, setName] = useState(editingItem?.name ?? route.params?.name ?? "");
+  const [barcode, setBarcode] = useState(editingItem?.barcode ?? route.params?.barcode ?? route.params?.scannedBarcode ?? "");
+  const [imageUri, setImageUri] = useState(editingItem?.imageUri ?? route.params?.imageUri ?? "");
+  const [category, setCategory] = useState(editingItem?.category ?? route.params?.category ?? "野菜");
+  const [quantity, setQuantity] = useState(String(editingItem?.quantity ?? route.params?.quantity ?? ""));
+  const [unit, setUnit] = useState(editingItem?.unit ?? route.params?.unit ?? getDefaultUnitForCategory(editingItem?.category ?? route.params?.category ?? "野菜"));
+  const initialExpiryDate = editingItem?.expiryDate ?? route.params?.expiryDate ?? (route.params?.defaultExpiryDays !== undefined ? calculateExpiryDate(route.params.defaultExpiryDays) : "");
+  const [expiryDate, setExpiryDate] = useState(initialExpiryDate);
   const [plannedUseDate, setPlannedUseDate] = useState(editingItem?.plannedUseDate ?? "");
-  const [inspectionDate, setInspectionDate] = useState(editingItem?.inspectionDate ?? formatISO(addDays(new Date(), settings.inspectionIntervalDays), { representation: "date" }));
-  const [location, setLocation] = useState(editingItem?.location ?? "冷蔵庫");
+  const [inspectionDate] = useState(editingItem?.inspectionDate ?? "");
+  const [location, setLocation] = useState(editingItem?.location ?? route.params?.location ?? "冷蔵庫");
   const [memo, setMemo] = useState(editingItem?.memo ?? "");
   const [shouldRestock, setShouldRestock] = useState(editingItem?.shouldRestock ?? true);
+  const [saveAsFavorite, setSaveAsFavorite] = useState(route.params?.saveToFavoriteDefault ?? false);
+  const [selectedExpiryDays, setSelectedExpiryDays] = useState<number | undefined>(
+    route.params?.defaultExpiryDays ?? calculateDefaultExpiryDays(initialExpiryDate)
+  );
   const [openSections, setOpenSections] = useState({
     basic: true,
     dates: true,
@@ -49,14 +63,46 @@ export function StockFormScreen({ route, navigation }: Props) {
 
   function changeCategory(nextCategory: string): void {
     setCategory(nextCategory);
+    setSelectedExpiryDays(undefined);
     const nextOptions = getUnitOptionsForCategory(nextCategory);
-    if (nextCategory === "防災用品" && name.includes("トイレ")) {
-      setUnit("回分");
-      return;
-    }
     if (!nextOptions.includes(unit)) {
       setUnit(getDefaultUnitForCategory(nextCategory));
     }
+  }
+
+  function chooseExpiryDays(days: number): void {
+    setSelectedExpiryDays(days);
+    setExpiryDate(calculateExpiryDate(days));
+  }
+
+  function chooseManualExpiry(date: string): void {
+    setExpiryDate(date);
+    setSelectedExpiryDays(calculateDefaultExpiryDays(date));
+  }
+
+  function applyStockItem(item: StockItem): void {
+    setName(item.name);
+    setQuantity(String(item.quantity));
+    setUnit(item.unit);
+    setCategory(item.category);
+    setLocation(item.location);
+    if (item.barcode) setBarcode(item.barcode);
+    if (item.memo) setMemo(item.memo);
+    const days = calculateDefaultExpiryDays(item.expiryDate);
+    if (days !== undefined) chooseExpiryDays(days);
+    showToast("前回と同じ内容を入力しました");
+  }
+
+  function applyFavorite(template: NonNullable<ReturnType<typeof findFavoriteByName>>): void {
+    setName(template.name);
+    setQuantity(String(template.quantity));
+    setUnit(template.unit);
+    if (template.category) setCategory(template.category);
+    if (template.location) setLocation(template.location);
+    if (template.defaultExpiryDays !== undefined) chooseExpiryDays(template.defaultExpiryDays);
+    if (template.barcode) setBarcode(template.barcode);
+    if (template.memo) setMemo(template.memo);
+    showToast("前回と同じ内容を入力しました");
   }
 
   async function keepImageInAppStorage(uri: string): Promise<string> {
@@ -163,8 +209,8 @@ export function StockFormScreen({ route, navigation }: Props) {
       Alert.alert("入力エラー", "品名と正しい数量を入力してください。");
       return;
     }
-    if (!isValidDateInput(expiryDate) || !isValidDateInput(plannedUseDate) || !isValidDateInput(inspectionDate)) {
-      Alert.alert("日付エラー", "日付は 2026-05-20 のように8桁の数字で入力してください。");
+    if (!isValidDateInput(expiryDate) || !isValidDateInput(plannedUseDate)) {
+      Alert.alert("日付エラー", "日付をもう一度選び直してください。");
       return;
     }
 
@@ -201,29 +247,59 @@ export function StockFormScreen({ route, navigation }: Props) {
             createdAt: new Date().toISOString()
           });
         }
+        if (!editingItem && saveAsFavorite) {
+          const favorite = createFavoriteFromStock(item);
+          const existing = findFavoriteByName(shoppingTemplates, favorite.name);
+          if (existing) {
+            Alert.alert(
+              "よく買うものに登録済みです",
+              `「${favorite.name}」はすでによく買うものに登録されています。内容を更新しますか？`,
+              [
+                {
+                  text: "更新する",
+                  onPress: () => void setShoppingTemplates(upsertFavoriteItem(shoppingTemplates, favorite)).then(() => {
+                    void markShoppingItemPurchased();
+                    showToast("食品を保存し、よく買うものを更新しました");
+                    navigation.goBack();
+                  })
+                },
+                {
+                  text: "そのまま",
+                  onPress: () => {
+                    void markShoppingItemPurchased();
+                    showToast("食品を保存しました");
+                    navigation.goBack();
+                  }
+                },
+                { text: "キャンセル", style: "cancel" }
+              ]
+            );
+            return;
+          }
+          await setShoppingTemplates(upsertFavoriteItem(shoppingTemplates, favorite));
+        }
+        await markShoppingItemPurchased();
         showToast(editingItem ? "食品を更新しました" : "食品を保存しました");
         navigation.goBack();
       })
       .catch(() => Alert.alert("保存エラー", "食品を保存できませんでした。"));
   }
 
-  function markInspected(): void {
-    const nextDate = formatISO(addDays(new Date(), settings.inspectionIntervalDays), { representation: "date" });
-    setInspectionDate(nextDate);
-    addStockHistoryItem({
-      id: `history-${Date.now()}`,
-      type: "点検",
-      stockItemId: editingItem?.id,
-      name: name || "食品",
-      memo: `次回点検日: ${nextDate}`,
-      createdAt: new Date().toISOString()
-    })
-      .then(() => showToast("点検完了を記録しました"))
-      .catch(() => Alert.alert("履歴エラー", "点検履歴を保存できませんでした。"));
+  async function markShoppingItemPurchased(): Promise<void> {
+    const shoppingId = route.params?.fromShoppingListItemId;
+    if (!shoppingId) return;
+    await setShoppingItems(shoppingItems.map((item) => item.id === shoppingId ? {
+      ...item,
+      checked: true,
+      status: "purchased",
+      updatedAt: new Date().toISOString()
+    } : item));
   }
 
-  const todayHint = formatISO(new Date(), { representation: "date" });
   const unitOptions = getUnitOptionsForCategory(category, unit);
+  const expiryCandidates = getDefaultExpiryCandidates(category);
+  const favoriteSuggestion = !editingItem ? findFavoriteByName(shoppingTemplates, name) : undefined;
+  const stockSuggestion = !favoriteSuggestion && !editingItem ? findLatestStockByName(stockItems, name) : undefined;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -231,6 +307,28 @@ export function StockFormScreen({ route, navigation }: Props) {
       <View style={styles.form}>
         <FormSection title="基本情報" open={openSections.basic} onToggle={() => toggleSection("basic")}>
           <FormInput label="品名" value={name} onChangeText={setName} placeholder="例：牛乳" />
+          {favoriteSuggestion ? (
+            <View style={styles.suggestionCard}>
+              <Text style={styles.suggestionTitle}>前回の登録内容があります</Text>
+              <Text style={styles.name}>{favoriteSuggestion.name}</Text>
+              <Text style={styles.meta}>
+                {favoriteSuggestion.quantity}{favoriteSuggestion.unit} / {favoriteSuggestion.category ?? "カテゴリ未設定"} / {favoriteSuggestion.location ?? "保管場所未設定"}
+              </Text>
+              <Text style={styles.meta}>期限目安：{formatDefaultExpiryDays(favoriteSuggestion.defaultExpiryDays)}</Text>
+              <PrimaryButton title="前回と同じ内容を使う" variant="soft" onPress={() => applyFavorite(favoriteSuggestion)} />
+            </View>
+          ) : null}
+          {stockSuggestion ? (
+            <View style={styles.suggestionCard}>
+              <Text style={styles.suggestionTitle}>前回の登録内容があります</Text>
+              <Text style={styles.name}>{stockSuggestion.name}</Text>
+              <Text style={styles.meta}>
+                {stockSuggestion.quantity}{stockSuggestion.unit} / {stockSuggestion.category} / {stockSuggestion.location}
+              </Text>
+              <Text style={styles.meta}>期限目安：{formatDefaultExpiryDays(calculateDefaultExpiryDays(stockSuggestion.expiryDate))}</Text>
+              <PrimaryButton title="前回と同じ内容を使う" variant="soft" onPress={() => applyStockItem(stockSuggestion)} />
+            </View>
+          ) : null}
           <FormInput label="数量" value={quantity} onChangeText={setQuantity} keyboardType="numeric" placeholder="例：6" />
           <Text style={styles.groupLabel}>単位</Text>
           <SelectButtonGroup options={unitOptions} value={unit} onChange={setUnit} />
@@ -240,11 +338,21 @@ export function StockFormScreen({ route, navigation }: Props) {
           <SelectButtonGroup options={locations} value={location} onChange={setLocation} />
         </FormSection>
 
-        <FormSection title="期限・点検" open={openSections.dates} onToggle={() => toggleSection("dates")}>
-          <FormInput label="賞味期限" value={expiryDate} onChangeText={(value) => setExpiryDate(formatDateInput(value))} keyboardType="number-pad" maxLength={10} placeholder={`例：${todayHint}`} />
-          <FormInput label="消費予定日" value={plannedUseDate} onChangeText={(value) => setPlannedUseDate(formatDateInput(value))} keyboardType="number-pad" maxLength={10} placeholder={`例：${todayHint}`} />
-          <FormInput label="次回点検日" value={inspectionDate} onChangeText={(value) => setInspectionDate(formatDateInput(value))} keyboardType="number-pad" maxLength={10} placeholder={`例：${todayHint}`} />
-          <PrimaryButton title="点検完了にする" onPress={markInspected} variant="soft" />
+        <FormSection title="期限" open={openSections.dates} onToggle={() => toggleSection("dates")}>
+          <Text style={styles.groupLabel}>賞味期限</Text>
+          <View style={styles.expiryGrid}>
+            {expiryCandidates.map((candidate) => (
+              <Pressable key={candidate.label} style={[styles.expiryButton, candidate.days !== undefined && selectedExpiryDays === candidate.days && styles.expiryButtonSelected]} onPress={() => candidate.days !== undefined ? chooseExpiryDays(candidate.days) : undefined}>
+                <Text style={[styles.expiryButtonText, candidate.days !== undefined && selectedExpiryDays === candidate.days && styles.expiryButtonTextSelected]}>
+                  {candidate.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.selectedExpiryText}>選択中の賞味期限：{expiryDate || "未選択"}</Text>
+          <CalendarDatePicker label="日付を選ぶ" value={expiryDate} onChange={chooseManualExpiry} />
+          <PrimaryButton title="期限写真を添付する" variant="soft" onPress={() => navigation.navigate("OcrExpiry")} />
+          <CalendarDatePicker label="消費予定日" value={plannedUseDate} onChange={setPlannedUseDate} />
         </FormSection>
 
         <FormSection title="写真・バーコード" open={openSections.scan} onToggle={() => toggleSection("scan")}>
@@ -262,15 +370,31 @@ export function StockFormScreen({ route, navigation }: Props) {
           <View style={styles.switchRow}>
             <View>
               <Text style={styles.switchTitle}>買い足し対象にする</Text>
-              <Text style={styles.switchSub}>期限間近のとき買い物リストへ出します</Text>
+              <Text style={styles.switchSub}>食べ切ったあと買い足すものとして表示します</Text>
             </View>
             <Switch value={shouldRestock} onValueChange={setShouldRestock} />
           </View>
         </FormSection>
+        {!editingItem ? (
+          <Pressable style={styles.favoriteToggle} onPress={() => setSaveAsFavorite((current) => !current)}>
+            <Text style={styles.checkBox}>{saveAsFavorite ? "✓" : ""}</Text>
+            <Text style={styles.favoriteToggleText}>この食品を「よく買うもの」に保存する</Text>
+          </Pressable>
+        ) : null}
         <PrimaryButton title="保存する" onPress={save} />
       </View>
     </ScrollView>
   );
+}
+
+function expiryLabel(days: number): string {
+  if (days === 0) return "今日";
+  if (days === 1) return "明日";
+  if (days === 180) return "半年後";
+  if (days === 365) return "1年後";
+  if (days === 730) return "2年後";
+  if (days === 1095) return "3年後";
+  return `${days}日後`;
 }
 
 function FormSection({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
@@ -295,8 +419,21 @@ const styles = StyleSheet.create({
   sectionIcon: { color: colors.primary, fontSize: 24, fontWeight: "900" },
   sectionBody: { gap: 14, padding: 14, borderTopWidth: 1, borderTopColor: colors.border },
   groupLabel: { color: colors.textMain, fontSize: 15, fontWeight: "800" },
+  suggestionCard: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, gap: 8 },
+  name: { color: colors.textMain, fontSize: 17, fontWeight: "900" },
+  meta: { color: colors.textSub, fontSize: 13, lineHeight: 19 },
+  suggestionTitle: { color: colors.primary, fontSize: 14, fontWeight: "900" },
+  expiryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  expiryButton: { minWidth: 84, borderColor: colors.border, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.card, alignItems: "center" },
+  expiryButtonSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  expiryButtonText: { color: colors.textSub, fontWeight: "800" },
+  expiryButtonTextSelected: { color: colors.card },
+  selectedExpiryText: { color: colors.textMain, fontSize: 15, fontWeight: "800", backgroundColor: colors.primarySoft, borderRadius: 8, padding: 10 },
   image: { width: "100%", height: 180, borderRadius: 8, backgroundColor: colors.muted },
   photoActions: { gap: 8 },
+  favoriteToggle: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
+  checkBox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.primary, color: colors.primary, textAlign: "center", lineHeight: 20, fontSize: 16, fontWeight: "900" },
+  favoriteToggleText: { color: colors.textMain, fontSize: 15, fontWeight: "800", flex: 1 },
   switchRow: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
   switchTitle: { color: colors.textMain, fontSize: 16, fontWeight: "800" },
   switchSub: { color: colors.textSub, fontSize: 13, marginTop: 3 }

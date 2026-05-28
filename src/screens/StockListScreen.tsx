@@ -159,7 +159,6 @@ function StockListRow({ item, onEdit, onDelete }: { item: StockItem; onEdit: () 
             <Text style={[styles.expiryText, { color: statusColor }]}>{expiryText}</Text>
             <Text style={styles.dateText}>{item.expiryDate ?? "未設定"}</Text>
           </View>
-          {item.inspectionDate ? <Text style={styles.inspectionText}>次回点検: {item.inspectionDate}</Text> : null}
         </View>
       </View>
       <View style={styles.rowActions}>
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
   summaryLabel: { color: colors.textSub, fontSize: 12, fontWeight: "800" },
   summaryValue: { color: colors.primary, fontSize: 24, fontWeight: "900", marginTop: 2 },
   filters: { paddingHorizontal: 20, paddingTop: 14, flexDirection: "row", gap: 10 },
-  adWrap: { paddingHorizontal: 20, paddingTop: 12 },
+  adWrap: { display: "none" },
   filterField: { flex: 1, gap: 6 },
   filterLabel: { color: colors.textMain, fontSize: 13, fontWeight: "900" },
   filterButton: { minHeight: 46, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
@@ -229,7 +228,6 @@ const styles = StyleSheet.create({
   quantity: { color: colors.primary, fontSize: 20, fontWeight: "900" },
   expiryText: { fontSize: 15, fontWeight: "900" },
   dateText: { color: colors.textSub, fontSize: 13, fontWeight: "700" },
-  inspectionText: { color: colors.textSub, fontSize: 12, fontWeight: "700" },
   rowActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
   smallButton: { minWidth: 64, minHeight: 36, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
   smallButtonText: { color: colors.primary, fontWeight: "900" },

@@ -1,9 +1,8 @@
 import { formatISO } from "date-fns";
 import { AppSettings, ShoppingItem, ShoppingReason, StockItem } from "../types";
 import { getDaysUntilExpiry } from "./expiryUtils";
-import { calculateRequirements } from "./stockCalculator";
 
-function createShoppingItem(name: string, reason: ShoppingReason, quantity?: number, unit?: string): ShoppingItem {
+function createShoppingItem(name: string, reason: ShoppingReason, quantity?: number, unit?: string, source: ShoppingItem["source"] = "manual"): ShoppingItem {
   const stableKey = `${reason}-${name}-${unit ?? ""}`;
   return {
     id: `auto-${stableKey}`,
@@ -12,6 +11,8 @@ function createShoppingItem(name: string, reason: ShoppingReason, quantity?: num
     unit,
     reason,
     checked: false,
+    source,
+    status: "pending",
     createdAt: formatISO(new Date())
   };
 }
@@ -22,17 +23,12 @@ export function generateAutoShoppingItems(
   manualItems: ShoppingItem[]
 ): ShoppingItem[] {
   const autoItems: ShoppingItem[] = [];
-
-  calculateRequirements(stockItems, settings)
-    .filter((result) => result.shortage > 0)
-    .forEach((result) => {
-      autoItems.push(createShoppingItem(result.label, "不足", result.shortage, result.unit));
-    });
+  void settings;
 
   stockItems.forEach((item) => {
     const remaining = getDaysUntilExpiry(item.expiryDate);
     if (item.shouldRestock && remaining !== undefined && remaining <= 30) {
-      autoItems.push(createShoppingItem(item.name, "期限間近", item.quantity, item.unit));
+      autoItems.push(createShoppingItem(item.name, "買い足し予定", item.quantity, item.unit, "nearExpiry"));
     }
   });
 
@@ -48,14 +44,15 @@ export function mergeShoppingItems(items: ShoppingItem[]): ShoppingItem[] {
     const key = item.id.startsWith("auto-") ? item.id : `${item.name}-${item.reason}-${item.unit ?? ""}`;
     const existing = map.get(key);
     if (!existing) {
-      map.set(key, item);
+      map.set(key, { ...item, status: item.status ?? (item.checked ? "purchased" : "pending") });
       return;
     }
 
     map.set(key, {
       ...existing,
       quantity: existing.id === item.id ? item.quantity ?? existing.quantity : (existing.quantity ?? 0) + (item.quantity ?? 0),
-      checked: existing.checked || item.checked
+      checked: existing.checked || item.checked,
+      status: existing.checked || item.checked ? "purchased" : "pending"
     });
   });
 

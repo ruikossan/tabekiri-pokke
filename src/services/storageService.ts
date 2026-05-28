@@ -1,10 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppSettings, EmergencyBagItem, ShoppingItem, ShoppingTemplate, StockHistoryItem, StockItem } from "../types";
-import { defaultEmergencyBagItems, defaultSettings, defaultShoppingTemplates, sampleStockItems } from "../constants/sampleData";
+import { AppSettings, ShoppingItem, ShoppingTemplate, StockHistoryItem, StockItem } from "../types";
+import { defaultSettings, defaultShoppingTemplates, sampleStockItems } from "../constants/sampleData";
 
 const keys = {
   stockItems: "stockItems",
-  emergencyBagItems: "emergencyBagItems",
   shoppingItems: "shoppingItems",
   stockHistoryItems: "stockHistoryItems",
   shoppingTemplates: "shoppingTemplates",
@@ -36,8 +35,6 @@ async function setJson<T>(key: string, value: T): Promise<void> {
 export const storageService = {
   getStockItems: () => getJson<StockItem[]>(keys.stockItems, []),
   saveStockItems: (items: StockItem[]) => setJson(keys.stockItems, items),
-  getEmergencyBagItems: () => getJson<EmergencyBagItem[]>(keys.emergencyBagItems, defaultEmergencyBagItems),
-  saveEmergencyBagItems: (items: EmergencyBagItem[]) => setJson(keys.emergencyBagItems, items),
   getShoppingItems: () => getJson<ShoppingItem[]>(keys.shoppingItems, []),
   saveShoppingItems: (items: ShoppingItem[]) => setJson(keys.shoppingItems, items),
   getStockHistoryItems: () => getJson<StockHistoryItem[]>(keys.stockHistoryItems, []),
@@ -56,7 +53,6 @@ export const storageService = {
   async seedSampleData(): Promise<void> {
     await Promise.all([
       setJson(keys.stockItems, sampleStockItems),
-      setJson(keys.emergencyBagItems, defaultEmergencyBagItems),
       setJson(keys.shoppingItems, []),
       setJson(keys.stockHistoryItems, []),
       setJson(keys.shoppingTemplates, defaultShoppingTemplates),
@@ -68,7 +64,6 @@ export const storageService = {
   async resetAll(): Promise<void> {
     await Promise.all([
       AsyncStorage.removeItem(keys.stockItems),
-      AsyncStorage.removeItem(keys.emergencyBagItems),
       AsyncStorage.removeItem(keys.shoppingItems),
       AsyncStorage.removeItem(keys.stockHistoryItems),
       AsyncStorage.removeItem(keys.shoppingTemplates),

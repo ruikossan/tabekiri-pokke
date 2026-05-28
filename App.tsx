@@ -8,14 +8,13 @@ import { FirstLaunchGuide } from "./src/components/FirstLaunchGuide";
 import { ToastMessage } from "./src/components/ToastMessage";
 import { AppDataProvider, useAppData } from "./src/services/AppDataContext";
 import { BarcodeScanScreen } from "./src/screens/BarcodeScanScreen";
-import { BeginnerGuideScreen } from "./src/screens/BeginnerGuideScreen";
-import { EmergencyBagScreen } from "./src/screens/EmergencyBagScreen";
+import { ContinuousScanScreen } from "./src/screens/ContinuousScanScreen";
 import { ExpiryCheckScreen } from "./src/screens/ExpiryCheckScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { GuideScreen } from "./src/screens/GuideScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { LocationViewScreen } from "./src/screens/LocationViewScreen";
-import { RequirementCheckScreen } from "./src/screens/RequirementCheckScreen";
+import { OcrExpiryScreen } from "./src/screens/OcrExpiryScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { ShoppingTemplatesScreen } from "./src/screens/ShoppingTemplatesScreen";
 import { ShoppingListScreen } from "./src/screens/ShoppingListScreen";
@@ -146,6 +145,7 @@ function AppNavigator() {
             screenOptions={{
               headerStyle: { backgroundColor: colors.card },
               headerTintColor: colors.textMain,
+              headerBackTitle: "戻る",
               headerTitleStyle: { fontWeight: "800" },
               contentStyle: { backgroundColor: colors.background }
             }}
@@ -154,14 +154,13 @@ function AppNavigator() {
           <Stack.Screen name="StockList" component={StockListScreen} options={{ title: "食品ストック一覧" }} />
           <Stack.Screen name="StockForm" component={StockFormScreen} options={{ title: "食品登録" }} />
           <Stack.Screen name="BarcodeScan" component={BarcodeScanScreen} options={{ title: "バーコード読み取り" }} />
+          <Stack.Screen name="ContinuousScan" component={ContinuousScanScreen} options={{ title: "連続スキャン" }} />
+          <Stack.Screen name="OcrExpiry" component={OcrExpiryScreen} options={{ title: "期限写真を使う" }} />
           <Stack.Screen name="History" component={HistoryScreen} options={{ title: "履歴" }} />
           <Stack.Screen name="LocationView" component={LocationViewScreen} options={{ title: "場所ごとに見る" }} />
-          <Stack.Screen name="BeginnerGuide" component={BeginnerGuideScreen} options={{ title: "防災備蓄リスト" }} />
           <Stack.Screen name="ShoppingTemplates" component={ShoppingTemplatesScreen} options={{ title: "よく買うもの" }} />
           <Stack.Screen name="Guide" component={GuideScreen} options={{ title: "使い方ガイド" }} />
           <Stack.Screen name="ExpiryCheck" component={ExpiryCheckScreen} options={{ title: "期限チェック" }} />
-          <Stack.Screen name="RequirementCheck" component={RequirementCheckScreen} options={{ title: "必要量チェック" }} />
-          <Stack.Screen name="EmergencyBag" component={EmergencyBagScreen} options={{ title: "防災バッグ" }} />
           <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: "買い物リスト" }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "設定" }} />
           </Stack.Navigator>

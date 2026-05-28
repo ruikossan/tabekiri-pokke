@@ -1,7 +1,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
-import { AppSettings, EmergencyBagItem, ShoppingItem, ShoppingTemplate, StockHistoryItem, StockItem } from "../types";
-import { defaultEmergencyBagItems, defaultSettings, defaultShoppingTemplates } from "../constants/sampleData";
+import { AppSettings, ShoppingItem, ShoppingTemplate, StockHistoryItem, StockItem } from "../types";
+import { defaultSettings, defaultShoppingTemplates } from "../constants/sampleData";
 import { notificationService } from "./notificationService";
 import { storageService } from "./storageService";
 
@@ -13,7 +13,6 @@ type AppDataContextValue = {
   clearToast: () => void;
   openFirstGuide: () => void;
   stockItems: StockItem[];
-  emergencyBagItems: EmergencyBagItem[];
   shoppingItems: ShoppingItem[];
   stockHistoryItems: StockHistoryItem[];
   shoppingTemplates: ShoppingTemplate[];
@@ -22,7 +21,6 @@ type AppDataContextValue = {
   updateStockItem: (item: StockItem) => Promise<void>;
   deleteStockItem: (id: string) => Promise<void>;
   consumeStockItem: (id: string) => Promise<void>;
-  setEmergencyBagItems: (items: EmergencyBagItem[]) => Promise<void>;
   addShoppingItem: (item: ShoppingItem) => Promise<void>;
   setShoppingItems: (items: ShoppingItem[]) => Promise<void>;
   addStockHistoryItem: (item: StockHistoryItem) => Promise<void>;
@@ -40,7 +38,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [showFirstGuide, setShowFirstGuide] = useState(false);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [emergencyBagItems, setBagItemsState] = useState<EmergencyBagItem[]>(defaultEmergencyBagItems);
   const [shoppingItems, setShoppingItemsState] = useState<ShoppingItem[]>([]);
   const [stockHistoryItems, setStockHistoryItemsState] = useState<StockHistoryItem[]>([]);
   const [shoppingTemplates, setShoppingTemplatesState] = useState<ShoppingTemplate[]>(defaultShoppingTemplates);
@@ -83,16 +80,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function loadStoredData(): Promise<void> {
-    const [storedStocks, storedBags, storedShopping, storedHistory, storedTemplates, storedSettings] = await Promise.all([
+    const [storedStocks, storedShopping, storedHistory, storedTemplates, storedSettings] = await Promise.all([
       storageService.getStockItems(),
-      storageService.getEmergencyBagItems(),
       storageService.getShoppingItems(),
       storageService.getStockHistoryItems(),
       storageService.getShoppingTemplates(),
       storageService.getSettings()
     ]);
     setStockItems(storedStocks);
-    setBagItemsState(storedBags);
     setShoppingItemsState(storedShopping);
     setStockHistoryItemsState(storedHistory);
     setShoppingTemplatesState(storedTemplates);
@@ -102,11 +97,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   async function saveStocks(items: StockItem[]): Promise<void> {
     setStockItems(items);
     await storageService.saveStockItems(items);
-  }
-
-  async function saveBagItems(items: EmergencyBagItem[]): Promise<void> {
-    setBagItemsState(items);
-    await storageService.saveEmergencyBagItems(items);
   }
 
   async function saveShopping(items: ShoppingItem[]): Promise<void> {
@@ -148,7 +138,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     clearToast: () => setToast(null),
     openFirstGuide: () => setShowFirstGuide(true),
     stockItems,
-    emergencyBagItems,
     shoppingItems,
     stockHistoryItems,
     shoppingTemplates,
@@ -184,7 +173,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       await saveStocks(stockItems.filter((item) => item.id !== id));
     },
-    setEmergencyBagItems: saveBagItems,
     addShoppingItem: async (item) => saveShopping([item, ...shoppingItems]),
     setShoppingItems: saveShopping,
     addStockHistoryItem: async (item) => saveHistory([item, ...stockHistoryItems]),
@@ -205,7 +193,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       await Promise.all(stockItems.map((item) => notificationService.cancelNotifications(item.notificationIds)));
       await storageService.resetAll();
       setStockItems([]);
-      setBagItemsState(defaultEmergencyBagItems);
       setShoppingItemsState([]);
       setStockHistoryItemsState([]);
       setShoppingTemplatesState(defaultShoppingTemplates);
@@ -216,7 +203,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setShowFirstGuide(false);
       await storageService.setHasSeenGuide(true);
     }
-  }), [loading, showFirstGuide, toast, stockItems, emergencyBagItems, shoppingItems, stockHistoryItems, shoppingTemplates, settings]);
+  }), [loading, showFirstGuide, toast, stockItems, shoppingItems, stockHistoryItems, shoppingTemplates, settings]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }

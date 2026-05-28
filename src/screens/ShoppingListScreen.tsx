@@ -10,7 +10,7 @@ import { ShoppingItem, ShoppingReason } from "../types";
 import { useAppData } from "../services/AppDataContext";
 import { generateAutoShoppingItems } from "../utils/shoppingListUtils";
 
-const reasonOptions = ["すべて", "不足", "期限間近", "手動追加"];
+const reasonOptions = ["すべて", "買い足し予定", "手動追加"];
 
 export function ShoppingListScreen() {
   const { stockItems, settings, shoppingItems, addShoppingItem, setShoppingItems, addStockHistoryItem, showToast } = useAppData();
@@ -36,6 +36,7 @@ export function ShoppingListScreen() {
       unit,
       reason: "手動追加",
       checked: false,
+      source: "manual",
       createdAt: new Date().toISOString()
     };
     addShoppingItem(item)
@@ -64,32 +65,38 @@ export function ShoppingListScreen() {
     }
 
     if (existing) {
-      void setShoppingItems(shoppingItems.map((current) => current.id === item.id ? { ...current, checked: nextChecked } : current));
+      void setShoppingItems(shoppingItems.map((current) => current.id === item.id ? { ...current, checked: nextChecked, status: nextChecked ? "purchased" : "pending", updatedAt: new Date().toISOString() } : current));
     } else {
-      void addShoppingItem({ ...item, checked: nextChecked });
+      void addShoppingItem({ ...item, checked: nextChecked, status: nextChecked ? "purchased" : "pending", updatedAt: new Date().toISOString() });
     }
   }
 
   function remove(item: ShoppingItem): void {
     if (!shoppingItems.some((current) => current.id === item.id)) {
-      Alert.alert("自動項目", "不足や期限間近の自動項目は、食品や設定を更新すると消えます。");
+      Alert.alert("自動項目", "買い足し予定の自動項目は、食品を更新すると消えます。");
       return;
     }
-      void setShoppingItems(shoppingItems.filter((current) => current.id !== item.id)).then(() => showToast("買い物リストから削除しました"));
+    void setShoppingItems(shoppingItems.filter((current) => current.id !== item.id)).then(() => showToast("買い物リストから削除しました"));
   }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Header title="買い物リスト" subtitle="不足・期限間近・手動追加をまとめて確認します" />
+      <Header title="買い物リスト" subtitle="食べ切ったあとに買い足すもの、手動追加の商品をまとめて確認します" />
       <View style={styles.wrap}>
         <View style={styles.addCard}>
-          <FormInput label="商品名" value={name} onChangeText={setName} placeholder="例：水 2L" />
-          <FormInput label="数量" value={quantity} onChangeText={setQuantity} keyboardType="numeric" placeholder="例：6" />
-          <FormInput label="単位" value={unit} onChangeText={setUnit} placeholder="例：本" />
+          <FormInput label="商品名" value={name} onChangeText={setName} placeholder="例: 牛乳" />
+          <View style={styles.amountRow}>
+            <View style={styles.quantityField}>
+              <FormInput label="数量" value={quantity} onChangeText={setQuantity} keyboardType="numeric" placeholder="例: 1" />
+            </View>
+            <View style={styles.unitField}>
+              <FormInput label="単位" value={unit} onChangeText={setUnit} placeholder="例: 本" />
+            </View>
+          </View>
           <PrimaryButton title="手動で追加" onPress={addManual} />
         </View>
         <SelectButtonGroup options={reasonOptions} value={reasonFilter} onChange={setReasonFilter} />
-        {list.length === 0 ? <EmptyState title="買い物リストは空です" message="期限間近の食品や買い足し候補があると自動表示されます。" /> : list.map((item) => (
+        {list.length === 0 ? <EmptyState title="買い物リストは空です" message="買い足し予定や手動追加の商品があると表示されます。" /> : list.map((item) => (
           <View key={`${item.id}-${item.reason}`} style={[styles.item, item.checked && styles.checked]}>
             <Pressable style={styles.itemMain} onPress={() => toggle(item)}>
               <Text style={styles.check}>{item.checked ? "✓" : "□"}</Text>
@@ -99,9 +106,14 @@ export function ShoppingListScreen() {
               </View>
               <Text style={[styles.badge, badgeStyle(item.reason)]}>{item.reason}</Text>
             </Pressable>
-            <Pressable onPress={() => remove(item)} style={styles.deleteButton}>
-              <Text style={styles.deleteText}>削除</Text>
-            </Pressable>
+            <View style={styles.itemActions}>
+              <Pressable onPress={() => toggle(item)} style={styles.actionButton}>
+                <Text style={styles.actionText}>{item.checked ? "未購入に戻す" : "購入済み"}</Text>
+              </Pressable>
+              <Pressable onPress={() => remove(item)} style={styles.deleteButton}>
+                <Text style={styles.deleteText}>削除</Text>
+              </Pressable>
+            </View>
           </View>
         ))}
       </View>
@@ -110,8 +122,7 @@ export function ShoppingListScreen() {
 }
 
 function badgeStyle(reason: ShoppingReason) {
-  if (reason === "不足") return { color: colors.danger, borderColor: colors.danger };
-  if (reason === "期限間近") return { color: colors.yellow, borderColor: colors.yellow };
+  if (reason === "買い足し予定") return { color: colors.yellow, borderColor: colors.yellow };
   return { color: colors.primary, borderColor: colors.primary };
 }
 
@@ -120,6 +131,9 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 28 },
   wrap: { paddingHorizontal: 20, gap: 12 },
   addCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 14, gap: 12 },
+  amountRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  quantityField: { width: 116 },
+  unitField: { width: 96 },
   item: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, gap: 8 },
   checked: { opacity: 0.55 },
   itemMain: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -129,6 +143,9 @@ const styles = StyleSheet.create({
   checkedText: { textDecorationLine: "line-through", color: colors.textSub },
   meta: { color: colors.textSub, marginTop: 3 },
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, fontSize: 12, fontWeight: "800" },
-  deleteButton: { alignSelf: "flex-end", paddingHorizontal: 8, paddingVertical: 5 },
+  itemActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  actionButton: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  actionText: { color: colors.textMain, fontWeight: "800" },
+  deleteButton: { paddingHorizontal: 8, paddingVertical: 5 },
   deleteText: { color: colors.danger, fontWeight: "800" }
 });
