@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node tools/patch-react-native-dependencies-podspec.js",
+    "eas-build-post-install": "node tools/fix-ios-supported-platforms.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -18,13 +20,17 @@
     "expo": "~54.0.0",
     "expo-camera": "~17.0.10",
     "expo-file-system": "~19.0.22",
+    "expo-iap": "^4.3.1",
     "expo-image-picker": "~17.0.11",
     "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.0",
+    "react-native-google-mobile-ads": "^16.3.3",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0"
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
