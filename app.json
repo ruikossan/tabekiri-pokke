@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -15,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.tabekiripokke.app",
-      "buildNumber": "1",
+      "buildNumber": "20",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -31,7 +33,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0EA5E9"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -53,7 +59,21 @@
           "color": "#0EA5E9",
           "defaultChannel": "food-expiry"
         }
+      ],
+      "expo-iap",
+      "./plugins/with-ios-supported-platforms-fix",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-4658426326063416~9486369129"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e8161601-6762-4227-b2fc-81347a9848a6"
+      }
+    },
+    "owner": "ruikossan"
   }
 }
