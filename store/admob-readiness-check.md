@@ -32,6 +32,8 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\check-admob-readiness.ps1
 ```
 
+AdMob管理画面での確認と証跡記録は `store/admob-console-checklist.md` に沿って進めます。
+
 1. アプリがApp Storeで公開済み、または公開後のストア情報にリンクされている。
 2. AdMobのアプリ設定に、App StoreのストアIDまたはBundle ID `com.tabekiripokke.app` が正しく紐づいている。
 3. app-ads.txtステータスで `pub-4658426326063416` の行が確認済みになっている。

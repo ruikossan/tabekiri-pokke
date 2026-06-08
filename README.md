@@ -76,8 +76,8 @@ https://ruikossan.github.io/tabekiri-pokke/privacy.html
 - slug: `tabekiri-pokke`
 - iOS Bundle ID: `com.tabekiripokke.app`
 - iPhone専用: `ios.supportsTablet` は `false`
-- アプリバージョン: `1.2.0`
-- iOS Build Number: `22`
+- アプリバージョン: `1.2.1`
+- iOS Build Number: `23`
 - アプリアイコン: `./assets/icon.png`
 - スプラッシュ画像: `./assets/splash.png`
 - カメラ、写真ライブラリの権限説明
