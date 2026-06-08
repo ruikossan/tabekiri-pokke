@@ -7,10 +7,10 @@
 - バージョン: 1.2.0
 - iOS Bundle ID: com.tabekiripokke.app
 - Android package: com.tabekiripokke.app
-- iOS Build Number: 7
+- iOS Build Number: 22
 - Android Version Code: 1
 - 暗号化: 独自の非免除暗号化は使用しない
-- 広告: Google AdMob を使用する
+- 広告: Google AdMob を使用する（現行コードではiOSのみ広告表示）
 
 ## 公開URL
 
@@ -20,7 +20,7 @@ App Store Connect には次のURLを入力します。
 - サポートURL: https://ruikossan.github.io/tabekiri-pokke/support.html
 - プライバシーポリシーURL: https://ruikossan.github.io/tabekiri-pokke/privacy.html
 - 利用規約URL: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
-- app-ads.txt: https://ruikossan.github.io/app-ads.txt またはストアのデベロッパーWebサイトのドメイン直下に設置する
+- app-ads.txt: https://ruikossan.github.io/app-ads.txt
 
 ## ストア入力素材
 
@@ -37,7 +37,7 @@ App Store Connect には次のURLを入力します。
 
 1. `npm.cmd run typecheck` が成功することを確認する。
 2. 実機で食品登録、編集、削除、期限チェック、買い物リスト、通知設定、バーコード読み取り、写真登録を確認する。
-3. GitHub Pages で公開URLが開けることを確認する。
+3. GitHub Pages で公開URLが開けることを確認する。AdMob再審査前は `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\check-admob-readiness.ps1` を実行し、公開 `app-ads.txt` と公開プライバシーポリシーが最新内容になっていることを確認する。
 4. App Store Connect の説明文またはEULA欄に Apple標準EULA のURLを入力する。
 5. App内課金プロモーション画像は `screenshot/iap-promo-1024/` の専用画像を使い、アプリ画面スクリーンショットを使わない。画像内とPromoted In-App Purchaseの表示名・説明には価格を書かない。
 6. App Store Connect の「契約／税金／口座情報」で Paid Apps Agreement が有効になっていることを確認する。
@@ -49,8 +49,12 @@ App Store Connect には次のURLを入力します。
 12. EAS にログイン済みであることを確認する。
 13. App Store Connect の App Privacy を、Google Mobile Ads SDKの公式データ開示と `store/app-store-metadata.md` の回答案に合わせて更新する。
 14. AdMob の「プライバシーとメッセージ」で、配信地域に応じて必要な同意メッセージを作成・公開する。
-15. AdMob の app-ads.txt に表示される販売者情報が `docs/app-ads.txt` と一致することを確認する。
-16. Google PlayにAndroid版を出す場合は、Play Consoleで「広告を含む」を申告し、データセーフティも広告SDK導入後の内容に更新する。
+15. AdMob の app-ads.txt に表示される販売者情報が `https://ruikossan.github.io/app-ads.txt` と一致することを確認する。AdMobはストアのDeveloper Websiteのホスト名直下を確認するため、`/tabekiri-pokke/app-ads.txt` だけでは不十分。HTTP/HTTPSの両方で到達でき、`robots.txt` でクロールが拒否されていないことも確認する。
+16. AdMob のアプリ設定で、App Store公開後のストアIDまたはアプリ名・Bundle ID `com.tabekiripokke.app` が正しくリンクされていることを確認する。
+17. AdMob のアカウント確認、支払い情報、販売者情報、ポリシーセンターの未対応項目がないことを確認する。
+18. iOS広告計測のため、`app.json` の `ios.infoPlist.SKAdNetworkItems` がGoogle公式のAdMob iOSセットアップに掲載されている最新IDと一致することを確認する。
+19. 動画撮影・録音機能はないため、`expo-camera` の `microphonePermission` と `recordAudioAndroid` が `false` で、不要なマイク権限・説明文がネイティブ設定に入っていないことを確認する。
+20. Google PlayにAndroid版を出す場合は、Play Consoleで「広告を含む」を申告し、データセーフティも広告SDK導入後の内容に更新する。Androidで広告収益化する場合は、別途Android用AdMob App IDと広告ユニットIDを作成してコードへ追加する。
 
 ## EAS Build / Submit
 

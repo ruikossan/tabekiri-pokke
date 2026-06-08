@@ -77,7 +77,7 @@ https://ruikossan.github.io/tabekiri-pokke/privacy.html
 - iOS Bundle ID: `com.tabekiripokke.app`
 - iPhone専用: `ios.supportsTablet` は `false`
 - アプリバージョン: `1.2.0`
-- iOS Build Number: `1`
+- iOS Build Number: `22`
 - アプリアイコン: `./assets/icon.png`
 - スプラッシュ画像: `./assets/splash.png`
 - カメラ、写真ライブラリの権限説明
@@ -122,9 +122,9 @@ npm run typecheck
 `eas.json` を作成済みです。
 
 ```bash
-eas login
-eas build --platform ios --profile production
-eas submit --platform ios --profile production
+npm.cmd exec --package eas-cli -- eas login
+npm.cmd exec --package eas-cli -- eas build --platform ios --profile production
+npm.cmd exec --package eas-cli -- eas submit --platform ios --profile production
 ```
 
 ## 使用技術

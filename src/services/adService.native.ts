@@ -3,6 +3,7 @@ import mobileAds, {
   AdEventType,
   AdsConsent,
   InterstitialAd,
+  MaxAdContentRating,
   RewardedAd,
   RewardedAdEventType,
   TestIds
@@ -19,6 +20,8 @@ const rewardedUnitIds: Record<Extract<RewardedAdPlacement, "continuousScanBoost"
   continuousScanBoost: "ca-app-pub-4658426326063416/8720082362"
 };
 
+let adsInitializationPromise: Promise<boolean> | null = null;
+
 function getInterstitialUnitId(placement: Exclude<RewardedAdPlacement, "continuousScanBoost">): string {
   return __DEV__ ? TestIds.INTERSTITIAL : interstitialUnitIds[placement];
 }
@@ -30,45 +33,63 @@ function getRewardedUnitId(placement: Extract<RewardedAdPlacement, "continuousSc
 async function prepareAds(): Promise<boolean> {
   try {
     const consentInfo = await AdsConsent.gatherConsent({ tagForUnderAgeOfConsent: false });
-    if (!consentInfo.canRequestAds) return false;
+    if (!consentInfo.canRequestAds && !__DEV__) return false;
   } catch {
-    return false;
+    if (!__DEV__) return false;
   }
 
-  await mobileAds().initialize();
-  return true;
+  if (!adsInitializationPromise) {
+    adsInitializationPromise = initializeAds();
+  }
+  return adsInitializationPromise;
 }
 
-function showFallbackNotice(): Promise<void> {
+async function initializeAds(): Promise<boolean> {
+  try {
+    await mobileAds().setRequestConfiguration({
+      maxAdContentRating: MaxAdContentRating.G,
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false
+    });
+    await mobileAds().initialize();
+    return true;
+  } catch {
+    return __DEV__;
+  }
+}
+
+function showFallbackNotice(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert("広告", "この環境では広告を表示できません。", [
-      { text: "閉じる", onPress: () => resolve() }
+      { text: "閉じる", onPress: () => resolve(false) }
     ]);
   });
 }
 
-async function showInterstitialAd(placement: Exclude<RewardedAdPlacement, "continuousScanBoost">): Promise<void> {
-  if (Platform.OS !== "ios") return Promise.resolve();
-  if (!(await prepareAds())) return Promise.resolve();
+async function showInterstitialAd(placement: Exclude<RewardedAdPlacement, "continuousScanBoost">): Promise<boolean> {
+  if (Platform.OS !== "ios") return Promise.resolve(false);
+  if (!(await prepareAds())) return Promise.resolve(false);
 
   return new Promise((resolve) => {
     const ad = InterstitialAd.createForAdRequest(getInterstitialUnitId(placement));
     let settled = false;
+    let didShow = false;
 
-    const finish = () => {
+    const finish = (shown: boolean) => {
       if (settled) return;
       settled = true;
       unsubscribeLoaded();
       unsubscribeClosed();
       unsubscribeError();
-      resolve();
+      resolve(shown);
     };
 
     const unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
-      ad.show().catch(finish);
+      didShow = true;
+      ad.show().catch(() => finish(false));
     });
-    const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, finish);
-    const unsubscribeError = ad.addAdEventListener(AdEventType.ERROR, finish);
+    const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => finish(didShow));
+    const unsubscribeError = ad.addAdEventListener(AdEventType.ERROR, () => finish(false));
 
     ad.load();
   });
@@ -107,13 +128,13 @@ async function showRewardedAd(placement: Extract<RewardedAdPlacement, "continuou
 }
 
 export const adService = {
-  showVideoAd(placement: RewardedAdPlacement): Promise<void> {
+  showVideoAd(placement: RewardedAdPlacement): Promise<boolean> {
     if (placement === "continuousScanBoost") return showFallbackNotice();
     return showInterstitialAd(placement);
   },
   showRewardedVideo(placement: RewardedAdPlacement): Promise<boolean> {
     if (placement !== "continuousScanBoost") {
-      return showInterstitialAd(placement).then(() => true);
+      return showInterstitialAd(placement);
     }
     return showRewardedAd(placement);
   }
